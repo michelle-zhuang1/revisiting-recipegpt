@@ -1,0 +1,12 @@
+section,text
+Title,Ham Balls
+Ingredients,"2 c. ham, cubed 3 c. Bisquick 1 c. Cheddar cheese, shredded 2 tsp. spicy mustard 3/4 c. milk 1 c. Parmesan cheese, grated"
+Reference,Combine all ingredients. Roll into nickel size balls. Bake at 375° for 8 minutes or until lightly brown.
+Pretrained GPT-2 (Greedy),"Preheat oven to 350 degrees F. Line a baking sheet with parchment paper. In a large bowl, combine the flour, baking powder, salt, and pepper. In another bowl, mix together the egg yolks, salt and pepper, and the cheese. Add the ham and mix well. Pour the mixture into the prepared baking sheet. Bake for 20-25 minutes, or until the cheese is golden brown. Remove from the oven and let cool completely.
+Serve with a side of bread crumbs and a side salad.
+This post may contain links to Amazon or other partners; your purchases via these links can benefit Serious Eats. Read more about our affiliate linking policy."
+Fine-tuned (Greedy),Mix all ingredients together. Bake at 350° for 30 minutes.
+Fine-tuned (Beam),Mix all ingredients together. Bake at 350° for 30 minutes.
+Fine-tuned (Top-k),"Combine ingredients in a medium saucepan; bring to boil, stirring constantly. Cook until thickened, about 10 minutes or at least 5 minutes. Remove from heat; cover and cool. Roll balls to fit 13 x 9-inch pan. Bake at 350° for 15 minutes. Let cool before serving."
+Fine-tuned (Top-p),"Combine ingredients in a medium saucepan; bring to boil. Reduce heat. Cook until thickened, about 10 minutes."
+Fine-tuned (Temperature),"Combine ingredients in a medium saucepan; bring to a boil. Reduce heat and simmer 5 minutes, stirring frequently. Remove from heat; stir in remaining ingredients. Serve hot with Parmesan."
