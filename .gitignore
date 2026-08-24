@@ -3,3 +3,8 @@
 __pycache__/
 *.pyc
 .env
+
+# Personal recipe corpus and derived vector store — not for public distribution
+rag/data/
+rag/chroma_db/
+rag/.venv/
