@@ -65,19 +65,42 @@ actual corpus, not invented examples.
   more semantically distinctive (artichoke, in practice) rather than requiring both
   be present. **Fixed by `pantry_search.py`** for the AND-filtering use case —
   deterministic ingredient extraction + matching, not embedding similarity.
-- **`extract_ingredient_name` is a heuristic, not a real parser**, and has a real
-  backlog after testing against the full 8243-line corpus (not just hand-picked
-  examples):
-  - Still **actively wrong** on some inputs: a trailing-comma heuristic meant to
-    strip prep clauses (`"...chicken breasts, diced"` → drop `", diced"`) sometimes
-    deletes real ingredient words instead (`"1/4 cup raw, unsalted cashews"` →
-    `"raw"`, dropping "cashews"). No fix yet — needs a curated prep-word vocabulary
-    (diced, chopped, minced, ...) to distinguish "drop this" from "keep this."
-  - Not handled: unicode fraction characters (`½`, `⅓`, `¾`), `"or"` alternatives
-    (`"egg or 1 large egg"`), nested parentheses, no-space compact quantities with no
-    following space (`"43gMelted..."`), Mela's `"#"`-prefixed section headers leaking
-    into the ingredients list as if they were ingredients, `oz`/`lb` unit
-    abbreviations (only `tbsp`/`tsp`/`g` are covered).
+- **`extract_ingredient_name` is a heuristic, not a real parser.** Fixed against the
+  full 8243-line corpus (not just hand-picked examples), with real before/after
+  numbers where the fix was partial rather than complete:
+  - **Fixed**: the trailing-comma heuristic no longer deletes real ingredient words
+    (`"1/4 cup raw, unsalted cashews"` used to become `"raw"`, dropping "cashews" —
+    now only strips a trailing clause if every word in it is a known prep term,
+    checked against a curated `PREP_WORDS` set rather than assumed).
+  - **Fixed**: dangling trailing commas left after a parenthetical is stripped.
+  - **Fixed** (~90%): unicode fraction characters (`½`, `⅓`, `¾`, ...) — 1106 of 8243
+    lines had one; 111 residual cases remain, all inside an *already-known* other
+    issue (an `"or"` alternative, a parenthetical, or a non-standard leading word),
+    not a new gap.
+  - **Fixed** (~76%): en-dash ranges (`"2–3 cloves garlic"`) — 22 of 29 lines.
+    Remainder needs the spelled-out-leading-number fix below, or is an en-dash used
+    stylistically as a hyphen (`"Middle Eastern–style"`), not an actual range.
+  - **Partially fixed** (~51%, up from 23%): `"cut into ½-inch pieces"`-style
+    trailing clauses — extended `PREP_WORDS` with cut/shape vocabulary (cubes,
+    chunks, wedges, slices, ...) and made clause-stripping iterative (peel multiple
+    trailing clauses one at a time, e.g. `"...wedges, to serve"`). Remaining 53/108
+    need either deeper shape vocabulary (quarters/sixths/eighths, "depending on
+    size") or handling clauses that contain their own internal commas — real, but
+    hit diminishing returns for the effort.
+  - **Fixed**: leading qualifier words (`"scant ¼ teaspoon salt"`) — very low
+    frequency (2 lines total in the corpus), done for completeness.
+  - **Deliberately not fixed** — confirmed to not actually matter: `"Zest of X"` /
+    `"Juice of X"` sentence shape (quantity isn't leading). Looked broken (the
+    unicode-fraction backlog above initially flagged it), but `matches_query` does
+    whole-word search across the *entire* extracted string, so `"lemon"` still
+    matches `"Juice of ½ lemon"` correctly even though extraction never touches the
+    leading `"Juice of"` part. Cosmetic only, not a filtering bug — skipped.
+  - **Not handled**: `"or"` alternatives (`"egg or 1 large egg"`), nested
+    parentheses, no-space compact quantities with no following space
+    (`"43gMelted..."`), Mela's `"#"`-prefixed section headers leaking into the
+    ingredients list as if they were ingredients, spelled-out leading numbers
+    (`"one 4–6 oz container"`), `oz`/`lb` unit abbreviations (only `tbsp`/`tsp`/`g`
+    are covered), square brackets used instead of parens for metric conversions.
   - Units covered so far: `cups?`, `tablespoons?`/`tbsp\.?`, `teaspoons?`/`tsp\.?`,
     `grams?`/`g`, `ounces?`, `pounds?`, `ml`, `milliliters?`, `liters?`, `cloves?`,
     `slices?`.

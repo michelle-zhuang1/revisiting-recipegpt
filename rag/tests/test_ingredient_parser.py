@@ -45,3 +45,56 @@ def test_strips_tsp_abbreviation():
 def test_strips_bare_gram_abbreviation_with_no_space():
     assert extract_ingredient_name("100g Red Cabbage") == "Red Cabbage"
     assert extract_ingredient_name("20g Fresh Coriander") == "Fresh Coriander"
+
+
+def test_does_not_strip_trailing_clause_that_is_part_of_the_ingredient():
+    assert extract_ingredient_name("1/4 cup raw, unsalted cashews") == "raw, unsalted cashews"
+
+
+def test_strips_multi_word_prep_clause():
+    assert extract_ingredient_name("2 medium shallots, chopped finely") == "medium shallots"
+    assert extract_ingredient_name("2 scallions, sliced thinly") == "scallions"
+
+
+def test_strips_dangling_trailing_comma_left_by_paren_removal():
+    assert extract_ingredient_name("250 g minced pork, (9oz )") == "minced pork"
+
+
+def test_strips_unicode_fraction_quantities():
+    assert extract_ingredient_name("¼ teaspoon salt") == "salt"
+    assert extract_ingredient_name("¾ cup all-purpose flour") == "all-purpose flour"
+    assert extract_ingredient_name("1½ teaspoons ground cinnamon") == "ground cinnamon"
+
+
+def test_strips_cut_into_measurement_clause():
+    assert (
+        extract_ingredient_name("3 ounces Spanish-style chorizo, cut into ½-inch pieces")
+        == "Spanish-style chorizo"
+    )
+    assert (
+        extract_ingredient_name("1¼ pounds rhubarb, cut into ½-inch pieces")
+        == "rhubarb"
+    )
+
+
+def test_strips_cut_into_shape_words():
+    assert (
+        extract_ingredient_name("1/2 cup/113 grams unsalted butter, cut into cubes")
+        == "unsalted butter"
+    )
+
+
+def test_strips_multiple_trailing_clauses_iteratively():
+    assert extract_ingredient_name("1 lemon, cut into wedges, to serve") == "lemon"
+
+
+def test_strips_leading_qualifier_word():
+    assert extract_ingredient_name("scant ¼ teaspoon salt") == "salt"
+
+
+def test_strips_en_dash_range_quantity():
+    assert extract_ingredient_name("2–3 cloves garlic") == "garlic"
+    assert (
+        extract_ingredient_name("1–2 tablespoons harissa paste (2 tablespoons would be medium spicy)")
+        == "harissa paste"
+    )
