@@ -154,7 +154,8 @@ test can assert on.
     `liters?`, `cloves?`, `slices?`.
 - **`ingredient_matcher.COMPOUND_EXCLUSIONS` and `CATEGORIES` are small and will
   need to keep growing.** `COMPOUND_EXCLUSIONS` covers `corn` (→ corn starch, corn
-  syrup, cornmeal, cornbread, corn tortilla), `chicken` (→ chicken powder), `milk`
+  syrup, cornmeal, cornbread, corn tortilla), `chicken` (→ chicken powder, chicken
+  bouillon), `milk`
   (→ coconut/almond/oat/soy/cashew milk), `butter` (→ peanut/almond butter), and
   `cream` (→ cream of tartar) — all found by testing real queries against the real
   corpus, not anticipated in advance. `CATEGORIES` currently has one entry, `dairy`
@@ -165,9 +166,8 @@ test can assert on.
   list. Deliberately *not* solved generally (would need real food-ontology work like
   USDA FoodData Central); a compound like "chicken broth" is correctly *not*
   excluded, since it's an actual chicken product, unlike "chicken powder."
-  **Open question, needs a judgment call**: is "chicken bouillon" more like "chicken
-  broth" (real chicken, keep matching) or "chicken powder" (synthetic seasoning,
-  exclude)? Found via a real `hybrid_search.py` query, not yet resolved either way.
+  "Chicken bouillon" (powdered chicken broth) was resolved the same way as
+  "chicken powder" — excluded.
 - **Time-based queries ("something quick") are weakly supported in `search.py`,
   and numeric time parsing/filtering (the equivalent of `pantry_search.py` but for
   "under 30 minutes") is deliberately deprioritized, not just unstarted.** Only

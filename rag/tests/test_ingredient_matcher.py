@@ -29,6 +29,14 @@ def test_chicken_does_not_match_chicken_powder():
     assert matches_query("chicken powder", "chicken") is False
 
 
+def test_chicken_does_not_match_chicken_bouillon():
+    assert matches_query("chicken bouillon", "chicken") is False
+
+
+def test_chicken_still_matches_chicken_broth():
+    assert matches_query("chicken broth", "chicken") is True
+
+
 def test_chicken_still_matches_real_chicken():
     assert matches_query("chicken thighs", "chicken") is True
 

@@ -13,7 +13,7 @@ import re
 COMPOUND_EXCLUSIONS: dict[str, set[str]] = {
     "corn": {"corn starch", "cornstarch", "corn syrup", "cornmeal", "corn meal",
              "cornbread", "corn tortilla", "corn tortillas"},
-    "chicken": {"chicken powder"},
+    "chicken": {"chicken powder", "chicken bouillon"},
     "milk": {"coconut milk", "almond milk", "oat milk", "soy milk", "cashew milk"},
     "butter": {"peanut butter", "almond butter"},
     "cream": {"cream of tartar"},
