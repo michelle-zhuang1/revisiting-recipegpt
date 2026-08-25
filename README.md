@@ -13,7 +13,7 @@ RecipeGPT showed that GPT-2 can be fine-tuned to generate coherent cooking instr
 3. Compares three adaptation settings — pretrained (no adaptation), full fine-tuning, and LoRA — on generation quality, perplexity, training time, and trainable-parameter count.
 4. Extends the LoRA comparison with a rank sweep (r = 4, 8, 16) to test whether quality scales with adapter capacity or plateaus.
 
-See `docs/proposal.docx` for the full problem statement and success criteria. A complete write-up (`docs/writeup.md`) and poster materials have not been migrated into this repo yet — see [Known issues / limitations](#known-issues--limitations).
+See `docs/proposal.docx` for the full problem statement and success criteria.
 
 ## Repository structure
 
@@ -50,10 +50,8 @@ See `docs/proposal.docx` for the full problem statement and success criteria. A 
     ├── training_metrics_final.json / training_metrics_pilot.json         # Full fine-tune training run stats
     ├── validation_metrics_final.json / validation_metrics_pilot.json     # Full fine-tune validation loss/perplexity
     ├── lora_validation_metrics_final.json                                # LoRA validation loss/perplexity
-    └── poster_example_recipe_0.csv / poster_success_example_0.csv / poster_contrast_example_1.csv  # Example recipes used in the poster (docs/poster.pdf, not yet added)
+    └── poster_example_recipe_0.csv / poster_success_example_0.csv / poster_contrast_example_1.csv  # Example recipes referenced in the course presentation poster (poster itself not included in this repo)
 ```
-
-> `docs/writeup.md`, `docs/poster.pdf`, `docs/poster_script.md`, `docs/anticipated_qa.md`, and `notebooks/03_results_analysis.ipynb` existed on the original shared Drive project but have not been migrated into this repo yet.
 
 ## Setup
 
@@ -78,7 +76,6 @@ This project originally ran entirely on **Google Colab** against a shared Drive 
 
 1. **`01_dataset_preparation.ipynb`** — downloads RecipeNLG, cleans and reservoir-samples it, writes `train.csv` / `validation.csv` / `test.csv` to `data/`.
 2. **`02_train_and_evaluate.ipynb`** — depends on step 1's output. Set `PILOT_MODE = True` first to validate the full pipeline on a small subset before committing GPU time to the full run (`PILOT_MODE = False`, 20k/2k/2k, 2 epochs). Produces the model checkpoints, LoRA adapters, generation outputs, and metrics CSVs/JSONs in `results/`.
-3. **`03_results_analysis.ipynb`** — not yet added to this repo. Was intended to load step 2's outputs from `results/` and produce derived comparison tables; no GPU needed.
 
 ## Key results (final run, not pilot)
 
@@ -89,11 +86,11 @@ This project originally ran entirely on **Google Colab** against a shared Drive 
 | Full fine-tune vs. LoRA (r=8) | LoRA trained 0.236% of the parameters full fine-tuning did, in 76% of the training time, retaining 91–99% of generation-quality metrics. |
 | LoRA rank sweep (r=4/8/16) | Quality plateaus early — r=4 performs essentially as well as r=16 on BLEU/ROUGE-L/BERTScore-F1, suggesting this task's adaptation needs little rank capacity. |
 
-Full numbers, discussion, and interpretation were in `docs/writeup.md` (not yet added to this repo — see above).
+Full numbers are in the `results/` CSVs/JSONs listed above; the discussion and interpretation accompanying them (the course write-up) isn't included in this repo.
 
 ## Known issues / limitations
 
-- **This repo is a work-in-progress migration** from a shared Google Drive project. `docs/writeup.md`, poster materials, and `notebooks/03_results_analysis.ipynb` haven't been brought over yet, and the notebooks still target the original Colab/Drive paths rather than this repo's local `data/`/`models/`/`results/` folders.
+- **This repo holds the code, data, models, and results migrated from a shared Google Drive project** — not the full course write-up, poster materials, or the results-analysis notebook, which are intentionally not included. The notebooks that are here still target the original Colab/Drive paths rather than this repo's local `data/`/`models/`/`results/` folders.
 - **`PILOT_MODE` results are not representative of final results.** The pilot run (1k/200/200, 1 epoch) showed pretrained GPT-2 *beating* the fine-tuned model on BLEU, apparently a length/small-sample artifact — resolved at full scale. Confirm which mode any given results file corresponds to before citing it.
 - **Rank sweep, r=4 row:** `trainable_params` reads as 0 and `training_hours` is missing in `lora_rank_sweep_final.csv`. This is consistent with that adapter having been reloaded from a previously cached checkpoint (via `PeftModel.from_pretrained()`, which loads adapters with `requires_grad=False` by default) rather than trained fresh in the run that produced the final CSV. The generation-quality metrics for r=4 (BLEU/ROUGE-L/BERTScore/perplexity) are unaffected, since they only require running the model forward, not measuring its training. Re-run r=4's training fresh, or recover the original `rank_run_metrics.json`, before citing its efficiency numbers.
 - **No pretrained-model perplexity** is computed anywhere in the pipeline — only fine-tuned and LoRA perplexity are available, so the Goal 1 (pretrained vs. fine-tuned) comparison rests on generation-quality metrics alone for that axis.
@@ -103,7 +100,7 @@ Full numbers, discussion, and interpretation were in `docs/writeup.md` (not yet 
 
 ## Ethical considerations
 
-RecipeNLG is compiled from online recipe sources and may overrepresent certain cuisines or cooking styles; a model fine-tuned on it will tend to reproduce that same skew. No formal audit of cuisine/ingredient representation was performed. Separately, a generated recipe that garbles a step, quantity, or cook time could cause real harm if followed uncritically — outputs from this project should be treated as a drafting aid for human review, not a validated instruction set. Further discussion was in `docs/writeup.md` (not yet added to this repo).
+RecipeNLG is compiled from online recipe sources and may overrepresent certain cuisines or cooking styles; a model fine-tuned on it will tend to reproduce that same skew. No formal audit of cuisine/ingredient representation was performed. Separately, a generated recipe that garbles a step, quantity, or cook time could cause real harm if followed uncritically — outputs from this project should be treated as a drafting aid for human review, not a validated instruction set. Further discussion was covered in the accompanying course write-up, not included in this repo.
 
 ## License / academic context
 
