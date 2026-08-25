@@ -37,7 +37,18 @@ pip install -r requirements.txt
    share a word with the base ingredient but are a different food — see
    `COMPOUND_EXCLUSIONS` in `ingredient_matcher.py`). Use this instead of `search.py`
    whenever "must contain both X and Y" is a hard requirement rather than a
-   similarity preference.
+   similarity preference. `pantry_search.filter_recipes` also supports `exclude`
+   (must-not-contain ingredients) and `exclude_categories` (must-not-contain any
+   member of a curated category, e.g. `dairy` — see `CATEGORIES` in
+   `ingredient_matcher.py`) beyond the CLI's simple AND-only interface.
+6. **Hybrid search**: `python hybrid_search.py "something quick" --include chicken
+   --exclude-categories dairy` — structured filter first (via `pantry_search`), then
+   semantic-ranks only the surviving candidates by the vibe text (via a Chroma query
+   restricted to those `recipe_id`s). For queries that mix a hard constraint with a
+   style preference, rather than being purely one or the other. Takes structured
+   parameters (`--include`/`--exclude`/`--exclude-categories` flags), not a single
+   free-text sentence — parsing natural language into filter/vibe parts
+   automatically is out of scope for now (see Known limitations).
 
 `data/` (the parsed corpus) and `chroma_db/` (the vector store) are gitignored —
 both are regenerable from your own Mela export and aren't meant for the public repo,
@@ -50,13 +61,18 @@ pip install -r requirements-dev.txt
 python3 -m pytest tests/
 ```
 
-Covers five seams: `extract_mela.parse_recipe` (raw Mela JSON → clean dict),
-`ingest.build_chunks` (recipe → embeddable chunks), `search.search`'s contract
-(chunk-type filtering, `n_results`, hit shape — not retrieval *quality*, which has
-no independent expected value to test against and stays a manual/qualitative call),
-`ingredient_parser.extract_ingredient_name`, `ingredient_matcher.matches_query`, and
-`pantry_search.filter_by_ingredients`. All driven from real lines pulled from the
-actual corpus, not invented examples.
+Covers: `extract_mela.parse_recipe` (raw Mela JSON → clean dict), `ingest.build_chunks`
+(recipe → embeddable chunks), `search.search`'s contract (chunk-type filtering,
+`n_results`, hit shape), `ingredient_parser.extract_ingredient_name`,
+`ingredient_matcher.matches_query`/`matches_category`, `pantry_search.filter_by_ingredients`/
+`filter_recipes`, and `hybrid_search.rank_by_vibe`/`hybrid_search`. All driven from
+real lines pulled from the actual corpus, not invented examples — with one
+exception worth calling out: `rank_by_vibe`'s tests only check its *contract*
+(restricted to candidate `recipe_id`s, respects `n_results`, empty-candidates edge
+case), never ranking *order* — an earlier draft of this test asserted "quick" should
+outrank "slow" and it was flaky/wrong to write, since ranking quality is a function
+of embedding-model behavior with no independent ground truth, not something a unit
+test can assert on.
 
 ## Known limitations
 
@@ -136,14 +152,22 @@ actual corpus, not invented examples.
   - Units covered: `cups?`, `tablespoons?`/`tbsp\.?`, `teaspoons?`/`tsp\.?`,
     `grams?`/`g`, `ounces?`/`oz\.?`, `pounds?`/`lbs?\.?`, `ml`, `milliliters?`,
     `liters?`, `cloves?`, `slices?`.
-- **`ingredient_matcher.COMPOUND_EXCLUSIONS` is small and will need to keep growing.**
-  Currently covers `corn` (→ corn starch, corn syrup, cornmeal, cornbread, corn
-  tortilla) and `chicken` (→ chicken powder), both found by testing real queries
-  against the real corpus, not anticipated in advance. Expect more of these to
-  surface with use — same shape as the unit-abbreviation list, add as found.
-  Deliberately *not* solved generally (would need real food-ontology work like USDA
-  FoodData Central); a compound like "chicken broth" is correctly *not* excluded,
-  since it's an actual chicken product, unlike "chicken powder."
+- **`ingredient_matcher.COMPOUND_EXCLUSIONS` and `CATEGORIES` are small and will
+  need to keep growing.** `COMPOUND_EXCLUSIONS` covers `corn` (→ corn starch, corn
+  syrup, cornmeal, cornbread, corn tortilla), `chicken` (→ chicken powder), `milk`
+  (→ coconut/almond/oat/soy/cashew milk), `butter` (→ peanut/almond butter), and
+  `cream` (→ cream of tartar) — all found by testing real queries against the real
+  corpus, not anticipated in advance. `CATEGORIES` currently has one entry, `dairy`
+  (milk, butter, cheese, cream, yogurt, yoghurt, buttermilk, whey, casein, ricotta,
+  mascarpone), used by `hybrid_search.py`'s `--exclude-categories` and
+  `pantry_search.filter_recipes`'s `exclude_categories`. Expect more compounds and
+  categories to surface with use — add as found, same shape as the unit-abbreviation
+  list. Deliberately *not* solved generally (would need real food-ontology work like
+  USDA FoodData Central); a compound like "chicken broth" is correctly *not*
+  excluded, since it's an actual chicken product, unlike "chicken powder."
+  **Open question, needs a judgment call**: is "chicken bouillon" more like "chicken
+  broth" (real chicken, keep matching) or "chicken powder" (synthetic seasoning,
+  exclude)? Found via a real `hybrid_search.py` query, not yet resolved either way.
 - **Time-based queries ("something quick") are weakly supported in `search.py`,
   and numeric time parsing/filtering (the equivalent of `pantry_search.py` but for
   "under 30 minutes") is deliberately deprioritized, not just unstarted.** Only
@@ -157,6 +181,10 @@ actual corpus, not invented examples.
 
 **v2 candidates** (not started): the remaining `extract_ingredient_name` tail
 (`"cut into"` shape vocabulary, dual-compact-quantity lines — both low priority,
-diminishing returns); retrieval-conditioned generation via the RecipeGPT LoRA
-model, compared against unconditioned generation (novelty-vs-copying via n-gram
-overlap, a "feels like me" qualitative rubric, and diversity across generations).
+diminishing returns); free-text query parsing for `hybrid_search.py` (turning
+`"something quick with chicken and no dairy"` into `vibe`/`include`/
+`exclude_categories` automatically — real NLP scope, probably wants an LLM call
+rather than regex, deliberately deferred in favor of structured parameters for now);
+retrieval-conditioned generation via the RecipeGPT LoRA model, compared against
+unconditioned generation (novelty-vs-copying via n-gram overlap, a "feels like me"
+qualitative rubric, and diversity across generations).

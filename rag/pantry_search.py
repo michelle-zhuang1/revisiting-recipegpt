@@ -12,15 +12,18 @@ import argparse
 import json
 import sys
 
-from ingredient_matcher import matches_query
+from ingredient_matcher import matches_category, matches_query
 from ingredient_parser import extract_ingredient_name
 
 CORPUS_PATH = "data/corpus.json"
 
 
+def _extracted_names(recipe: dict) -> list[str]:
+    return [extract_ingredient_name(line) for line in recipe["ingredients"]]
+
+
 def recipe_has_ingredient(recipe: dict, query_term: str) -> bool:
-    names = (extract_ingredient_name(line) for line in recipe["ingredients"])
-    return any(matches_query(name, query_term) for name in names)
+    return any(matches_query(name, query_term) for name in _extracted_names(recipe))
 
 
 def filter_by_ingredients(recipes: list[dict], query_terms: list[str]) -> list[dict]:
@@ -29,6 +32,25 @@ def filter_by_ingredients(recipes: list[dict], query_terms: list[str]) -> list[d
         for recipe in recipes
         if all(recipe_has_ingredient(recipe, term) for term in query_terms)
     ]
+
+
+def filter_recipes(
+    recipes: list[dict],
+    include: list[str] = (),
+    exclude: list[str] = (),
+    exclude_categories: list[str] = (),
+) -> list[dict]:
+    result = []
+    for recipe in recipes:
+        names = _extracted_names(recipe)
+        if not all(any(matches_query(n, t) for n in names) for t in include):
+            continue
+        if any(any(matches_query(n, t) for n in names) for t in exclude):
+            continue
+        if any(any(matches_category(n, c) for n in names) for c in exclude_categories):
+            continue
+        result.append(recipe)
+    return result
 
 
 def main() -> None:

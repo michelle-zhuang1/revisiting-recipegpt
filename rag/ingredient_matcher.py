@@ -14,6 +14,9 @@ COMPOUND_EXCLUSIONS: dict[str, set[str]] = {
     "corn": {"corn starch", "cornstarch", "corn syrup", "cornmeal", "corn meal",
              "cornbread", "corn tortilla", "corn tortillas"},
     "chicken": {"chicken powder"},
+    "milk": {"coconut milk", "almond milk", "oat milk", "soy milk", "cashew milk"},
+    "butter": {"peanut butter", "almond butter"},
+    "cream": {"cream of tartar"},
 }
 
 
@@ -29,3 +32,16 @@ def matches_query(ingredient_name: str, query_term: str) -> bool:
         return False
 
     return True
+
+
+# Grounded in what's actually in the corpus, not guessed — see rag/README.md.
+CATEGORIES: dict[str, set[str]] = {
+    "dairy": {"milk", "butter", "cheese", "cream", "yogurt", "yoghurt",
+              "buttermilk", "whey", "casein", "ricotta", "mascarpone"},
+}
+
+
+def matches_category(ingredient_name: str, category: str) -> bool:
+    return any(
+        matches_query(ingredient_name, term) for term in CATEGORIES.get(category, set())
+    )
