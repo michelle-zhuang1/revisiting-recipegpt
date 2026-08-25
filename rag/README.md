@@ -144,14 +144,19 @@ actual corpus, not invented examples.
   Deliberately *not* solved generally (would need real food-ontology work like USDA
   FoodData Central); a compound like "chicken broth" is correctly *not* excluded,
   since it's an actual chicken product, unlike "chicken powder."
-- **Time-based queries ("something quick") are weakly supported in `search.py`.**
-  Only ~47% of recipes have `total_time` populated at all (39%/37% for prep/cook —
-  Mela's clipper doesn't always find this on the source page), so there's often
-  nothing for a time-based query to match against regardless of technique.
+- **Time-based queries ("something quick") are weakly supported in `search.py`,
+  and numeric time parsing/filtering (the equivalent of `pantry_search.py` but for
+  "under 30 minutes") is deliberately deprioritized, not just unstarted.** Only
+  ~47% of recipes have `total_time` populated at all (39%/37% for prep/cook —
+  Mela's clipper doesn't always find this on the source page). Unlike the
+  ingredient-parser work, this is a data-coverage ceiling, not a parsing-quality
+  problem — even a perfect time parser can't help the 53% of recipes with nothing
+  to parse, so the effort/payoff ratio is worse than it looks. Revisit only if a
+  way to backfill missing time data shows up (e.g. re-deriving it from
+  `instructions` text), not by improving the parser alone.
 
-**v2 candidates** (not started): work through the `extract_ingredient_name` backlog
-above; numeric time parsing + filtering (same shape as ingredient extraction, for
-"under 30 minutes" as a hard constraint rather than a vibe); retrieval-conditioned
-generation via the RecipeGPT LoRA model, compared against unconditioned generation
-(novelty-vs-copying via n-gram overlap, a "feels like me" qualitative rubric, and
-diversity across generations).
+**v2 candidates** (not started): the remaining `extract_ingredient_name` tail
+(`"cut into"` shape vocabulary, dual-compact-quantity lines — both low priority,
+diminishing returns); retrieval-conditioned generation via the RecipeGPT LoRA
+model, compared against unconditioned generation (novelty-vs-copying via n-gram
+overlap, a "feels like me" qualitative rubric, and diversity across generations).
