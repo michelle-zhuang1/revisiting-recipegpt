@@ -1,10 +1,11 @@
 # Recipe RAG
 
 Semantic search over a personal Mela recipe library — an extension of the RecipeGPT
-project. Milestone 1 (this stage): pure retrieval, no generation yet. Retrieval-
-conditioned generation (feeding retrieved recipes as context into the fine-tuned
-RecipeGPT LoRA model, and comparing against unconditioned generation) is a stretch
-goal to revisit separately, not yet started.
+project. Milestone 1: pure retrieval (semantic search, deterministic pantry
+AND/NOT-filtering, and a hybrid of both) — done. Milestone 2: retrieval-conditioned
+generation via the RecipeGPT LoRA model — attempted, with a clear negative result;
+see [Retrieval-conditioned generation results](#retrieval-conditioned-generation-results-milestone-2)
+below.
 
 ## Setup
 
@@ -49,6 +50,11 @@ pip install -r requirements.txt
    parameters (`--include`/`--exclude`/`--exclude-categories` flags), not a single
    free-text sentence — parsing natural language into filter/vibe parts
    automatically is out of scope for now (see Known limitations).
+7. **Generate**: `python generate.py "something quick with chicken and no dairy"`
+   — retrieves recipes via `hybrid_search`, feeds them as few-shot context into the
+   RecipeGPT LoRA model (`../models/gpt2_lora_final/adapter`), and asks it to
+   generate a new recipe "in a similar style." **Has a clear negative result — see
+   below before using this.**
 
 `data/` (the parsed corpus) and `chroma_db/` (the vector store) are gitignored —
 both are regenerable from your own Mela export and aren't meant for the public repo,
@@ -65,14 +71,71 @@ Covers: `extract_mela.parse_recipe` (raw Mela JSON → clean dict), `ingest.buil
 (recipe → embeddable chunks), `search.search`'s contract (chunk-type filtering,
 `n_results`, hit shape), `ingredient_parser.extract_ingredient_name`,
 `ingredient_matcher.matches_query`/`matches_category`, `pantry_search.filter_by_ingredients`/
-`filter_recipes`, and `hybrid_search.rank_by_vibe`/`hybrid_search`. All driven from
-real lines pulled from the actual corpus, not invented examples — with one
-exception worth calling out: `rank_by_vibe`'s tests only check its *contract*
-(restricted to candidate `recipe_id`s, respects `n_results`, empty-candidates edge
-case), never ranking *order* — an earlier draft of this test asserted "quick" should
-outrank "slow" and it was flaky/wrong to write, since ranking quality is a function
-of embedding-model behavior with no independent ground truth, not something a unit
-test can assert on.
+`filter_recipes`, `hybrid_search.rank_by_vibe`/`hybrid_search`, and `generate.py`'s
+prompt-construction functions (`recipe_to_text`, `build_conditioned_prompt`,
+`build_unconditioned_prompt`). All driven from real lines pulled from the actual
+corpus, not invented examples — with one exception worth calling out: `rank_by_vibe`'s
+tests only check its *contract* (restricted to candidate `recipe_id`s, respects
+`n_results`, empty-candidates edge case), never ranking *order* — an earlier draft of
+this test asserted "quick" should outrank "slow" and it was flaky/wrong to write,
+since ranking quality is a function of embedding-model behavior with no independent
+ground truth, not something a unit test can assert on. The same reasoning is why
+`generate.py`'s actual `model.generate()` call has no unit test at all — there's no
+independent expected output for a language model's generated text; that's what the
+results section below is for instead (a real, run, documented experiment, not a
+pass/fail assertion).
+
+## Retrieval-conditioned generation results (Milestone 2)
+
+Attempted exactly as originally proposed: retrieve top-k recipes via `hybrid_search`,
+feed them as few-shot context into the RecipeGPT LoRA model (`gpt2_lora_final`,
+r=8), ask it to generate a new recipe "in a similar style," greedy decoding. This
+was flagged as high-risk before building it (GPT-2 Small is 124M params, was never
+trained for instruction-following or few-shot prompting, and only has a 1024-token
+context window) — the risk was confirmed, and confirmed more thoroughly than
+expected. Real run: `python generate.py "something quick with chicken and no dairy"`.
+
+**With k=3 retrieved recipes**: the three recipes alone tokenize to **1803 tokens**
+— nearly double the model's entire 1024-token context window, before the actual
+generation instruction is even added. Truncating to fit removes the *entire*
+instruction (`"Generate a new recipe for: ..., in a similar style to the above"`),
+since it sits at the end of the prompt and truncation cuts from the end. What's left
+after truncation ends mid-sentence inside someone else's recipe instructions
+(`"...Heat until hot (you can check by adding a"`). `generate.py` detects this case
+and skips generation with a clear message rather than proceeding — the underlying
+`transformers` call crashes with `IndexError: index out of range in self` in the
+position-embedding layer if attempted anyway, since there are zero token positions
+left for anything new.
+
+**With k=1** (553 tokens, well under the limit, instruction *not* truncated): still
+a clear failure, but a more informative one. The model ignores the instruction
+entirely and just continues the statistical pattern of the one retrieved example —
+generating another ingredient list that echoes the retrieved recipe's own
+ingredients (including "milk," directly violating the "no dairy" part of the
+request) rather than anything resembling a response to "generate a new recipe for
+X." This confirms the failure isn't only about context-window overflow — even with
+the instruction physically present and un-truncated, the model shows no evidence of
+following it. It was fine-tuned only to continue RecipeNLG's fixed
+title→ingredients→directions template, never to treat a preceding block of text as
+"context to draw from" versus "an instruction to execute."
+
+**Both runs also degenerate into repetition loops** under greedy decoding
+(`"1/2 c. milk"` × 30, `"1 teaspoon ground black pepper"` × 20+) — a baseline
+generation-quality issue independent of retrieval-conditioning, consistent with
+known greedy-decoding pathologies on small models (the original RecipeGPT
+comparison table found top-k/top-p necessary for output diversity for exactly this
+reason).
+
+**Conclusion**: naive few-shot retrieval-conditioning does not work on this model,
+for two independent reasons — context-window overflow at realistic k, and no
+instruction-following capability even when the instruction physically fits. Both
+are architectural properties of GPT-2 Small + a LoRA adapter fine-tuned only for
+template continuation, not fixable by prompt engineering. The mitigations discussed
+before attempting this (fine-tuning the model on the retrieval-conditioned task
+format specifically, or swapping in an instruction-tuned model for this experiment)
+remain open, undone options if this is revisited — this result is why they were
+worth considering in the first place, now with concrete evidence instead of a
+prediction.
 
 ## Known limitations
 
@@ -184,7 +247,13 @@ test can assert on.
 diminishing returns); free-text query parsing for `hybrid_search.py` (turning
 `"something quick with chicken and no dairy"` into `vibe`/`include`/
 `exclude_categories` automatically — real NLP scope, probably wants an LLM call
-rather than regex, deliberately deferred in favor of structured parameters for now);
-retrieval-conditioned generation via the RecipeGPT LoRA model, compared against
-unconditioned generation (novelty-vs-copying via n-gram overlap, a "feels like me"
-qualitative rubric, and diversity across generations).
+rather than regex, deliberately deferred in favor of structured parameters for now).
+
+Retrieval-conditioned generation was attempted, not skipped — see results above.
+If revisited, the real options are: fine-tune the LoRA adapter specifically on a
+retrieval-conditioned task format (context + generate) rather than hoping the model
+improvises it zero-shot, or swap in an instruction-tuned model for the generation
+step while keeping the RecipeGPT LoRA model as the unconditioned baseline arm only.
+The original comparison plan (novelty-vs-copying via n-gram overlap, a "feels like
+me" qualitative rubric, diversity across generations) is moot until generation
+itself actually produces something evaluable.
