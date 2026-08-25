@@ -20,7 +20,7 @@ def parse_recipe(raw: dict) -> dict:
         "ingredients": [
             line.strip()
             for line in raw.get("ingredients", "").split("\n")
-            if line.strip()
+            if line.strip() and not line.strip().startswith("#")
         ],
         "instructions": raw.get("instructions", ""),
         "notes": raw.get("notes", ""),

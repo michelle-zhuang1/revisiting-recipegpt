@@ -7,7 +7,7 @@ not meant to produce a canonical/normalized ingredient name.
 
 import re
 
-UNITS = r"cups?|tablespoons?|tbsp\.?|teaspoons?|tsp\.?|grams?|g|ounces?|pounds?|ml|milliliters?|liters?|cloves?|slices?"
+UNITS = r"cups?|tablespoons?|tbsp\.?|teaspoons?|tsp\.?|grams?|g|ounces?|oz\.?|pounds?|lbs?\.?|ml|milliliters?|liters?|cloves?|slices?"
 
 UNICODE_FRACTIONS = "½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞"
 
@@ -17,7 +17,7 @@ LEADING_QUANTITY_RE = re.compile(
     rf"^(?:(?:{QUALIFIERS})\s+)?[\d\s/.\-–{UNICODE_FRACTIONS}]+(?:(?:{UNITS})(?:/[\d.\s]*[a-z]+)?\s+)?",
     re.IGNORECASE,
 )
-TRAILING_PAREN_RE = re.compile(r"\s*\([^)]*\)\s*$")
+TRAILING_PAREN_RE = re.compile(r"\s*\((?:[^()]|\([^()]*\))*\)\s*$")
 TRAILING_CLAUSE_RE = re.compile(rf",\s*([a-z][a-z0-9./\-{UNICODE_FRACTIONS}\s]*)$")
 
 # A trailing ", ..." clause is only prep instructions (safe to drop) if every
@@ -58,13 +58,13 @@ def _strip_trailing_prep_clause(line: str) -> str:
 
 def extract_ingredient_name(line: str) -> str:
     line = LEADING_QUANTITY_RE.sub("", line, count=1).strip()
-    line = TRAILING_PAREN_RE.sub("", line).strip()
 
     while True:
-        stripped = _strip_trailing_prep_clause(line).strip()
+        stripped = TRAILING_PAREN_RE.sub("", line).strip()
+        stripped = _strip_trailing_prep_clause(stripped).strip()
+        stripped = stripped.rstrip(",").strip()
         if stripped == line:
             break
         line = stripped
 
-    line = line.rstrip(",").strip()
     return line

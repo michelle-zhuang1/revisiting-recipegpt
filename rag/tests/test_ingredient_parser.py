@@ -92,6 +92,28 @@ def test_strips_leading_qualifier_word():
     assert extract_ingredient_name("scant ¼ teaspoon salt") == "salt"
 
 
+def test_strips_paren_revealed_by_prior_clause_strip():
+    assert (
+        extract_ingredient_name("Sliced baguette (optional), for serving")
+        == "Sliced baguette"
+    )
+
+
+def test_strips_double_wrapped_parenthetical():
+    assert (
+        extract_ingredient_name("500 g sweet rice flour ((1.1 pounds))")
+        == "sweet rice flour"
+    )
+
+
+def test_strips_oz_and_lb_abbreviations():
+    assert extract_ingredient_name("1 15-oz. can tomato sauce") == "can tomato sauce"
+    assert (
+        extract_ingredient_name("1 lb. low-moisture mozzarella, coarsely grated")
+        == "low-moisture mozzarella"
+    )
+
+
 def test_strips_en_dash_range_quantity():
     assert extract_ingredient_name("2–3 cloves garlic") == "garlic"
     assert (

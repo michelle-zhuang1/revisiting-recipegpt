@@ -51,3 +51,9 @@ def test_parse_recipe_preserves_core_fields():
     assert parsed["recipe_id"] == RAW_RECIPE["id"]
     assert parsed["source_link"] == RAW_RECIPE["link"]
     assert parsed["categories"] == ["CopyCat", "Desserts"]
+
+
+def test_parse_recipe_drops_section_headers_from_ingredients():
+    raw = {**RAW_RECIPE, "ingredients": "# Dough\n1 cup flour\n### PROTEIN\n2 eggs"}
+    parsed = parse_recipe(raw)
+    assert parsed["ingredients"] == ["1 cup flour", "2 eggs"]

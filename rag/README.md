@@ -89,21 +89,48 @@ actual corpus, not invented examples.
     hit diminishing returns for the effort.
   - **Fixed**: leading qualifier words (`"scant ¼ teaspoon salt"`) — very low
     frequency (2 lines total in the corpus), done for completeness.
-  - **Deliberately not fixed** — confirmed to not actually matter: `"Zest of X"` /
-    `"Juice of X"` sentence shape (quantity isn't leading). Looked broken (the
-    unicode-fraction backlog above initially flagged it), but `matches_query` does
-    whole-word search across the *entire* extracted string, so `"lemon"` still
-    matches `"Juice of ½ lemon"` correctly even though extraction never touches the
-    leading `"Juice of"` part. Cosmetic only, not a filtering bug — skipped.
-  - **Not handled**: `"or"` alternatives (`"egg or 1 large egg"`), nested
-    parentheses, no-space compact quantities with no following space
-    (`"43gMelted..."`), Mela's `"#"`-prefixed section headers leaking into the
-    ingredients list as if they were ingredients, spelled-out leading numbers
-    (`"one 4–6 oz container"`), `oz`/`lb` unit abbreviations (only `tbsp`/`tsp`/`g`
-    are covered), square brackets used instead of parens for metric conversions.
-  - Units covered so far: `cups?`, `tablespoons?`/`tbsp\.?`, `teaspoons?`/`tsp\.?`,
-    `grams?`/`g`, `ounces?`, `pounds?`, `ml`, `milliliters?`, `liters?`, `cloves?`,
-    `slices?`.
+  - **Fixed**: `oz`/`lb` unit abbreviations (`"1 15-oz. can"`, `"1 lb. mozzarella"`).
+  - **Fixed** (~99%): nested/double-wrapped parentheticals (`"500 g flour
+    ((1.1 pounds))"` — a common Mela-import artifact) — 269/271 lines. Handled with
+    a regex that allows one level of nesting, not a full recursive parser; the 2
+    remaining cases have a genuinely mid-line (not trailing) nested paren.
+  - **Fixed** (~99%): no-space compact quantities (`"100g Red Cabbage"`) — turned out
+    to already be mostly resolved as a side effect of the bare-`g` fix; only 1 line
+    in the whole corpus has the true zero-space case (`"43gMelted..."`), not worth a
+    dedicated fix for n=1.
+  - **Fixed** (~97%): trailing artifacts revealed only *after* another cleanup step
+    ran (`"Sliced baguette (optional), for serving"` — stripping the `", for
+    serving"` clause reveals a now-trailing `"(optional)"` that a single pass would
+    miss). Paren-stripping and clause-stripping now loop together until nothing
+    changes, instead of each running once. Trailing-paren leakage dropped from 61 to
+    2 lines.
+  - **Fixed** (100%, but at the extraction layer, not here): Mela's `"#"`-prefixed
+    section headers (`"# Dough"`, `"### PROTEIN"`) were leaking into ingredient
+    lists as if they were ingredients — 454 of 8243 lines. This also meant they were
+    polluting `search.py`'s semantic embeddings for every recipe with sub-sections,
+    not just `pantry_search.py`'s extraction. Filtered out entirely in
+    `extract_mela.parse_recipe` (the right layer — a `"#"`-prefixed line is
+    unambiguously not an ingredient, no heuristic uncertainty).
+  - **Deliberately not fixed** — confirmed to not actually matter: `"or"`
+    alternatives (`"egg or 1 large egg"`) and `"Zest of X"`/`"Juice of X"` sentence
+    shape (quantity isn't leading). Both looked broken but `matches_query` does
+    whole-word search across the *entire* extracted string, so e.g. `"lemon"` still
+    matches `"Juice of ½ lemon"` and `"chicken"` still matches `"chicken or
+    vegetable broth"` correctly, regardless of the surrounding structure. Cosmetic
+    only, not a filtering bug — skipped both.
+  - **Not handled**: spelled-out leading numbers (`"one 4–6 oz container"`, 15
+    lines), square brackets used instead of parens for metric conversions (60
+    lines), a handful of dual-compact-quantity lines (`"30g 1/2c shallot"`, 4
+    lines). All low-frequency at this point — real but low priority.
+  - **~7 lines (0.09%) extract to an empty string** — not a bug, these are
+    genuinely malformed/fragment source lines in the Mela export itself (e.g. a
+    bare `'2'` with no unit or ingredient at all, or a line that's just a
+    parenthetical recipe note like `'(makes about 1 cup, enough for 8 salads)'`
+    that got included in the ingredients list by mistake). Nothing to extract
+    because the information was never there.
+  - Units covered: `cups?`, `tablespoons?`/`tbsp\.?`, `teaspoons?`/`tsp\.?`,
+    `grams?`/`g`, `ounces?`/`oz\.?`, `pounds?`/`lbs?\.?`, `ml`, `milliliters?`,
+    `liters?`, `cloves?`, `slices?`.
 - **`ingredient_matcher.COMPOUND_EXCLUSIONS` is small and will need to keep growing.**
   Currently covers `corn` (→ corn starch, corn syrup, cornmeal, cornbread, corn
   tortilla) and `chicken` (→ chicken powder), both found by testing real queries
