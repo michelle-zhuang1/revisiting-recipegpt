@@ -87,6 +87,8 @@ pass/fail assertion).
 
 ## Retrieval-conditioned generation results (Milestone 2)
 
+Short, standalone write-up: [`docs/milestone2_report.md`](docs/milestone2_report.md).
+
 Attempted exactly as originally proposed: retrieve top-k recipes via `hybrid_search`,
 feed them as few-shot context into the RecipeGPT LoRA model (`gpt2_lora_final`,
 r=8), ask it to generate a new recipe "in a similar style," greedy decoding. This
