@@ -12,12 +12,14 @@ UNITS = r"cups?|tablespoons?|tbsp\.?|teaspoons?|tsp\.?|grams?|g|ounces?|oz\.?|po
 UNICODE_FRACTIONS = "½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞"
 
 QUALIFIERS = r"scant|heaping|generous"
+NUMBER_WORDS = r"one|two|three|four|five|six|seven|eight|nine|ten"
 
 LEADING_QUANTITY_RE = re.compile(
-    rf"^(?:(?:{QUALIFIERS})\s+)?[\d\s/.\-–{UNICODE_FRACTIONS}]+(?:(?:{UNITS})(?:/[\d.\s]*[a-z]+)?\s+)?",
+    rf"^(?:(?:{QUALIFIERS}|{NUMBER_WORDS})\s+)?[\d\s/.\-–{UNICODE_FRACTIONS}]+(?:(?:{UNITS})(?:/[\d.\s]*[a-z]+)?\s+)?",
     re.IGNORECASE,
 )
 TRAILING_PAREN_RE = re.compile(r"\s*\((?:[^()]|\([^()]*\))*\)\s*$")
+BRACKET_RE = re.compile(r"\s*\[[^\]]*\]\s*")
 TRAILING_CLAUSE_RE = re.compile(rf",\s*([a-z][a-z0-9./\-{UNICODE_FRACTIONS}\s]*)$")
 
 # A trailing ", ..." clause is only prep instructions (safe to drop) if every
@@ -58,6 +60,7 @@ def _strip_trailing_prep_clause(line: str) -> str:
 
 def extract_ingredient_name(line: str) -> str:
     line = LEADING_QUANTITY_RE.sub("", line, count=1).strip()
+    line = BRACKET_RE.sub(" ", line).strip()
 
     while True:
         stripped = TRAILING_PAREN_RE.sub("", line).strip()

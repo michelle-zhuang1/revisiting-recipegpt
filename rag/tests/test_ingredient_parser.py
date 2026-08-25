@@ -92,6 +92,25 @@ def test_strips_leading_qualifier_word():
     assert extract_ingredient_name("scant ¼ teaspoon salt") == "salt"
 
 
+def test_strips_spelled_out_leading_number():
+    assert (
+        extract_ingredient_name("one 14-ounce can fire-roasted crushed tomatoes")
+        == "can fire-roasted crushed tomatoes"
+    )
+    assert (
+        extract_ingredient_name("two 14-ounce cans chickpeas, rinsed and drained")
+        == "cans chickpeas"
+    )
+
+
+def test_strips_square_bracket_metric_conversion():
+    assert (
+        extract_ingredient_name("½ cup [75 ml] extra-virgin olive oil")
+        == "extra-virgin olive oil"
+    )
+    assert extract_ingredient_name("1 cup [142 g] all-purpose flour") == "all-purpose flour"
+
+
 def test_strips_paren_revealed_by_prior_clause_strip():
     assert (
         extract_ingredient_name("Sliced baguette (optional), for serving")

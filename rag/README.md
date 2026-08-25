@@ -118,10 +118,15 @@ actual corpus, not invented examples.
     matches `"Juice of ½ lemon"` and `"chicken"` still matches `"chicken or
     vegetable broth"` correctly, regardless of the surrounding structure. Cosmetic
     only, not a filtering bug — skipped both.
-  - **Not handled**: spelled-out leading numbers (`"one 4–6 oz container"`, 15
-    lines), square brackets used instead of parens for metric conversions (60
-    lines), a handful of dual-compact-quantity lines (`"30g 1/2c shallot"`, 4
-    lines). All low-frequency at this point — real but low priority.
+  - **Fixed** (100%): square brackets used instead of parens for metric conversions
+    (`"½ cup [75 ml] extra-virgin olive oil"`) — 60/60 lines. Stripped globally
+    (anywhere in the line, not just leading/trailing) since brackets in this corpus
+    consistently mean "metric equivalent," safe to drop regardless of position.
+  - **Fixed** (~87%): spelled-out leading numbers (`"one 14-ounce can..."`) — 13/15
+    lines, same mechanism as the leading-qualifier fix (skip the word before the
+    real quantity starts).
+  - **Not handled**: a handful of dual-compact-quantity lines (`"30g 1/2c
+    shallot"`, 4 lines). Low-frequency, low priority.
   - **~7 lines (0.09%) extract to an empty string** — not a bug, these are
     genuinely malformed/fragment source lines in the Mela export itself (e.g. a
     bare `'2'` with no unit or ingredient at all, or a line that's just a
